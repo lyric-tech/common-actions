@@ -1,0 +1,23 @@
+name: 'Commit and Push'
+description: 'Actions to commit and push changes to branch'
+inputs:
+  ref:
+    description: >
+      The branch, tag or SHA to checkout. When checking out the repository that
+      triggered a workflow, this defaults to the reference or SHA for that
+      event.  Otherwise, uses the default branch.
+  message:
+    description: >
+      "Commit message for github to use when committing files"
+    default: "Updated files from Github Actions"
+
+runs:
+  using: "composite"
+  steps:
+    - name: setup git config
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "admin@lyric.tech"
+        git commit -am "${{ inputs.message }}" --allow-empty
+        git push origin ${{ inputs.ref }}
+      shell: bash

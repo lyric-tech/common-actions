@@ -1,0 +1,34 @@
+#Arguement Declaration
+ARG docker_registry
+
+#Stage 1
+FROM python:3.10-slim as requirements-stage
+WORKDIR /tmp
+COPY ./pyproject.toml ./poetry.lock* /tmp/
+RUN apt-get update && \
+    apt-get install -y git && \
+    pip install poetry && \
+    poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+# Final stage
+FROM ${docker_registry}/note-base/pandas2:latest
+ARG docker_uid=1001
+ARG private_repo_username
+ARG private_repo_token
+ARG github_username
+ARG github_token
+
+RUN echo "https://$github_username:$github_token@github.com" >> $HOME/.git-credentials && \
+    git config --global credential.helper store
+    
+USER ${docker_uid}
+WORKDIR /home/cbadmin
+
+COPY --chown=${docker_uid}:${docker_uid} --from=requirements-stage /tmp/requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade -r /home/cbadmin/requirements.txt && \
+    rm -rf ${HOME}/.git-credentials
+
+COPY . .
+
+CMD ["python3", "main.py"]
