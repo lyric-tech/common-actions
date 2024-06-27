@@ -135,6 +135,13 @@ jobs:
           docker_registry=${{ secrets.ECR_REGISTRY }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+    - name: Remove Build Docker images
+      run: 
+        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.TAG_NAME }} --force
+        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.APP_NAME }}:${{ inputs.TAG_NAME }} --force
+        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.APP_NAME }}:latest --force
+        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.APP_NAME }}:latest --force
         
     - name: Sent to Slack    
       uses: ravsamhq/notify-slack-action@v2
