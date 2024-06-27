@@ -1,0 +1,33 @@
+name: Python Unit Test
+
+on:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+  
+# TODO: This job need to be tested
+jobs:
+  pytest:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        poetry export --dev -f requirements.txt --output requirements.txt --without-hashes
+        pip install -r requirements.txt
+
+    - name: Run pytest
+      run: |
+        pytest
