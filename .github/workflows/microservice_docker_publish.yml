@@ -13,7 +13,7 @@ on:
         description: 'Application name for Docker build'
         default: ''        
       APP_NAME:
-        required: true
+        required: false
         type: string
         description: 'Application name for Docker build'
         default: ''
