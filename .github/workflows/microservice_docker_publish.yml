@@ -141,9 +141,12 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Remove Build Docker images
+      env:
+        TAG_NAME: ${{ inputs.TAG_NAME }}
       run: 
-        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }} --force
-        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }} --force
+        echo $TAG_NAME
+        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:$TAG_NAME --force
+        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}:$TAG_NAME --force
         docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:latest --force
         docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}:latest --force
         
