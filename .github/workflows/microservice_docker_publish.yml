@@ -7,6 +7,11 @@ on:
         default: '.'
         type: string
         description: 'Base directory for Docker build'
+      REPOSITORY_NAME:
+        required: true
+        type: string
+        description: 'Application name for Docker build'
+        default: ''        
       APP_NAME:
         required: true
         type: string
@@ -103,8 +108,8 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: |
-          411564643746.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.APP_NAME }}
-          us-docker.pkg.dev/development-367210/lyric/${{ inputs.APP_NAME }}
+          ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
@@ -131,15 +136,16 @@ jobs:
         build-args: |
           github_username=${{ secrets.LYRIC_GITHUB_USERNAME }}
           github_token=${{ secrets.LYRIC_GITHUB_TOKEN }}
+          docker_registry=${{ secrets.ECR_REGISTRY }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Remove Build Docker images
       run: 
-        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.APP_NAME }}:${{ inputs.TAG_NAME }} --force
-        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.APP_NAME }}:${{ inputs.TAG_NAME }} --force
-        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.APP_NAME }}:latest --force
-        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.APP_NAME }}:latest --force
+        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }} --force
+        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }} --force
+        docker rmi ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:latest --force
+        docker rmi ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}:latest --force
         
     - name: Sent to Slack    
       uses: ravsamhq/notify-slack-action@v2
