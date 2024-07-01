@@ -21,39 +21,22 @@ inputs:
   tag-name:
     description: 'Tag name'
     required: true
+  app-name:
+    description: 'Application name'
+    required: true
 
 runs:
   using: "composite"
   steps:
-    - run: echo "Processing ${{ inputs.repository }}"
-      shell: bash
-    - uses: actions/checkout@v4
+    - uses: lyric-tech/common-actions/actions/docker/delete-tag@ENG-5581
       with:
         repository: ${{ inputs.repository }}
+        tag-name: ${{ inputs.tag-name }}
         token: ${{ inputs.token }}
-    - name: setup git config
-      run: |
-        git config user.name "GitHub Actions Bot"
-        git config user.email "admin@lyric.tech"
-      shell: bash
-    - name: delete tag
-      run: |
-        git push --delete origin ${{ inputs.tag-name }} || true
-      shell: bash
-    - run: echo "Processing ${{ inputs.repository }} - branch ${{ inputs.ref }}"
-      shell: bash
-    - uses: actions/checkout@v4
+    - uses: lyric-tech/common-actions/actions/docker/create-tag@ENG-5581
       with:
         repository: ${{ inputs.repository }}
+        tag-name: ${{ inputs.tag-name }}
+        token: ${{ inputs.token }}
         ref: ${{ inputs.ref }}
-        token: ${{ inputs.token }}
-    - name: setup git config
-      run: |
-        git config user.name "GitHub Actions Bot"
-        git config user.email "admin@lyric.tech"
-      shell: bash
-    - name: create tag
-      run: |
-        git tag -a ${{ inputs.tag-name}} -m "Promoting version:${{ inputs.ref }}, Releasing version:${{ inputs.tag-name}}" -f
-        git push origin ${{ inputs.tag-name}}
-      shell: bash
+        app-name: ${{ inputs.app-name }}
