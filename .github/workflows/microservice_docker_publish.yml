@@ -8,7 +8,7 @@ on:
         type: string
         description: 'Base directory for Docker build'
       APP_NAME:
-        required: false
+        required: true
         type: string
         description: 'Application name for Docker build'
         default: ''
