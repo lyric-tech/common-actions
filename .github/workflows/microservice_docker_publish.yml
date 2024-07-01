@@ -2,13 +2,13 @@ name: Microservice Docker Build and Publish to ECR, GCR, and ACR
 
 on:
   workflow_call:
-    inputs:  
+    inputs: 
       BASE_DIRECTORY:
         default: '.'
         type: string
         description: 'Base directory for Docker build'
       APP_NAME:
-        required: true
+        required: false
         type: string
         description: 'Application name for Docker build'
         default: ''
