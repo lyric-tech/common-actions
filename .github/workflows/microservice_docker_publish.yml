@@ -74,7 +74,6 @@ jobs:
         images: |
           ${{ secrets.ECR_REGISTRY }}/${{ inputs.APP_NAME }}
           ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.APP_NAME }}
-          ${{ secrets.ACR_ENDPOINT }}/${{ inputs.APP_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
