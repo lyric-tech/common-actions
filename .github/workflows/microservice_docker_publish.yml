@@ -1,0 +1,160 @@
+name: Microservice Docker Build and Publish to ECR, GCR, and ACR
+
+on:
+  workflow_call:
+    inputs: 
+      BASE_DIRECTORY:
+        default: '.'
+        type: string
+        description: 'Base directory for Docker build'
+      REPOSITORY_NAME:
+        required: true
+        type: string
+        description: 'Application name for Docker build'
+        default: ''        
+      APP_NAME:
+        required: false
+        type: string
+        description: 'Application name for Docker build'
+        default: ''
+      TAG_NAME:
+        required: false
+        type: string
+        description: 'Tag name for Docker build'
+    secrets:
+      LYRIC_GITHUB_USERNAME:
+        required: false
+        description: 'Github username for private repo access'
+      LYRIC_GITHUB_TOKEN:
+        required: false
+        description: 'Github token for private repo access'
+      AWS_DEFAULT_REGION:
+        required: true
+        description: 'AWS region for ECR'
+      AWS_ECR_ROLE_ARN:
+        required: true
+        description: 'AWS role ARN for ECR'
+      ECR_REGISTRY:
+        required: true
+        description: 'ECR registry for ECR'
+      GCR_REGISTRY:
+        required: true
+        description: 'GCR registry for GCR'
+      GCP_WORKLOAD_IDENTITY:
+        required: true
+        description: 'GCP workload identity for GCR'
+      GCP_SERVICE_ACCOUNT:
+        required: true
+        description: 'GCP service account for GCR'
+      GCP_PROJECT_ID:
+        required: true
+        description: 'GCP project ID for GCR'
+      SLACK_WEBHOOK_URL:
+        required: true
+        description: 'Slack Webhook URL'             
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+  
+jobs:
+  # Build and publish
+  build_and_publish:
+    name: Build and Publish
+    runs-on: self-hosted
+    steps:
+    # Checkout the repository
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.TAG_NAME }}
+
+    # Configure AWS credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+    # Login to Amazon ECR
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+      with:
+        mask-password: 'true'
+          
+    # Login to Google Cloud
+    - name: 'Authenticate to Google Cloud'
+      id: 'auth'
+      uses: 'google-github-actions/auth@v2'
+      with:
+        token_format: 'access_token'
+        workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+        service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+    # Login to Google Cloud Registry
+    - name: Login to GCR
+      uses: docker/login-action@v3
+      env:
+        gcr_password: ${{ steps.auth.outputs.access_token}}
+      with:
+        registry: us-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ env.gcr_password }}
+
+    # Get Docker meta
+    - name: Docker meta for ECR
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
+        tags: |
+          type=ref,event=tag
+          type=raw,value=${{ inputs.TAG_NAME }}
+          type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+
+    # Set up QEMU
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    
+    # Set up Docker Buildx
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+   
+    # Build and push
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: '.'
+        platforms: linux/amd64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        target: ${{ inputs.APP_NAME }}
+        build-args: |
+          github_username=${{ secrets.LYRIC_GITHUB_USERNAME }}
+          github_token=${{ secrets.LYRIC_GITHUB_TOKEN }}
+          docker_registry=${{ secrets.ECR_REGISTRY }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Remove Build Docker images
+      env:
+        TAG_NAME: ${{ inputs.TAG_NAME }}
+      run: 
+        echo $DOCKER_METADATA_OUTPUT_TAGS
+        docker rmi $DOCKER_METADATA_OUTPUT_TAGS --force
+        
+    - name: Sent to Slack    
+      uses: ravsamhq/notify-slack-action@v2
+      if: failure()
+      with:
+        status: ${{ job.status }}
+        notification_title: "{workflow} has {status_message}"
+        message_format: "{emoji} *{workflow}* {status_message} in <{repo_url}|{repo}>"
+        footer: "Linked Repo <{repo_url}|{repo}>"
+        notify_when: "failure"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}        

@@ -1,0 +1,37 @@
+name: 'Delete docker tag'
+description: ''
+inputs:
+  repository:
+    description: 'Repository name with owner'
+    default: ${{ github.repository }}
+  token:
+    description: >
+      Personal access token (PAT) used to fetch the repository. The PAT is configured
+      with the local git config, which enables your scripts to run authenticated git
+      commands. The post-job step removes the PAT.
+      We recommend using a service account with the least permissions necessary.
+      Also when generating a new PAT, select the least scopes necessary.
+      [Learn more about creating and using encrypted secrets](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/creating-and-using-encrypted-secrets)
+    default: ${{ github.token }}
+  tag-name:
+    description: 'Tag name'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - run: echo "Processing ${{ inputs.repository }}"
+      shell: bash
+    - uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        token: ${{ inputs.token }}
+    - name: setup git config
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "admin@lyric.tech"
+      shell: bash
+    - name: delete tag
+      run: |
+        git push --delete origin ${{ inputs.tag-name }} || true
+      shell: bash
