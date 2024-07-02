@@ -1,6 +1,7 @@
 name: Auto publish tags for all development environments
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -17,5 +18,5 @@ jobs:
           repository: lyric-tech/infra-config
           ref: main
           tag-name: ${{ matrix.tag-name }}
-          token: ${{ secrets.LYRIC_TOKEN }}
+          token: ${{ secrets.LYRIC_GITHUB_TOKEN }}
 
