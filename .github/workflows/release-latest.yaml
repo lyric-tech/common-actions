@@ -1,0 +1,21 @@
+name: Auto publish tags for all development environments
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:     
+  delete-and-create-tags:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tag-name: ["latest"]
+    steps:
+      - uses: lyric-tech/common-actions/actions/git/delete-and-create-tag@latest
+        with:
+          repository: lyric-tech/infra-config
+          ref: main
+          tag-name: ${{ matrix.tag-name }}
+          token: ${{ secrets.LYRIC_TOKEN }}
+
