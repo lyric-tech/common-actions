@@ -9,12 +9,9 @@ on:
 jobs:     
   delete-and-create-tags:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        tag-name: ["latest"]
     steps:
       - uses: lyric-tech/common-actions/actions/git/delete-and-create-tag@latest
         with:
           ref: main
-          tag-name: ${{ matrix.tag-name }}
+          tag-name: "latest"
           token: ${{ secrets.LYRIC_GITHUB_TOKEN }}
