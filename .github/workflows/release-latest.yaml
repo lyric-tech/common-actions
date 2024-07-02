@@ -15,7 +15,6 @@ jobs:
     steps:
       - uses: lyric-tech/common-actions/actions/git/delete-and-create-tag@latest
         with:
-          repository: lyric-tech/infra-config
           ref: main
           tag-name: ${{ matrix.tag-name }}
           token: ${{ secrets.LYRIC_GITHUB_TOKEN }}
