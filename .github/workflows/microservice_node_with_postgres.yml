@@ -1,0 +1,39 @@
+name: Node Run Tests with Postgres Common File
+
+on:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+  
+jobs:
+  build:
+
+    name: NPM Install and Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Postgres stack
+      working-directory: test/server
+      run: docker-compose up -d
+      env:
+        POSTGRES_USER: lyric
+        POSTGRES_PASSWORD: lyric
+        POSTGRES_DB: lyric
+        TZ: UTC
+        PGTZ: UTC
+    - name: Use Node.js 18.16.1
+      uses: actions/setup-node@v3
+      with:
+          node-version: 18.16.1
+          cache: 'npm'
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run Build
+      run: npm run build --if-present
+
+    - name: Run Unit Test
+      run: AUTHSERVICE__DB_URI=postgres://lyric:lyric@localhost:35432/lyric TZ=UTC npm test
