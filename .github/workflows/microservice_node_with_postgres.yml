@@ -14,7 +14,8 @@ jobs:
     name: NPM Install and Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    
     - name: Build the Postgres stack
       working-directory: test/server
       run: docker-compose up -d
@@ -24,11 +25,13 @@ jobs:
         POSTGRES_DB: lyric
         TZ: UTC
         PGTZ: UTC
+        
     - name: Use Node.js 18.16.1
       uses: actions/setup-node@v3
       with:
           node-version: 18.16.1
           cache: 'npm'
+          
     - name: Install dependencies
       run: npm ci
     
