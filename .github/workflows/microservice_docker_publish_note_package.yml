@@ -69,6 +69,11 @@ jobs:
       with:
         ref: ${{ inputs.TAG_NAME }}
 
+    - name: Create License File
+      run: |
+        echo "${{ secrets.GUROBI_LICENSE }}" > gurobi.lic
+        echo "${{ secrets.LOCALSOLVER_LICENSE }}" > license.dat
+    
     # Configure AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
