@@ -1,33 +1,51 @@
-name: Python Unit Test
+name: Run Unit test on PR
 
 on:
-  workflow_call:
+    workflow_call:
 
-permissions:
-  id-token: write
-  contents: write 
-  repository-projects: write
-  
-# TODO: This job need to be tested
 jobs:
-  pytest:
-    name: Unit Test
+  test:
+    name: Run pytest and check coverage
     runs-on: ubuntu-latest
+
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        
-    - name: Install dependencies
-      run: |
-        pip install poetry
-        poetry export --dev -f requirements.txt --output requirements.txt --without-hashes
-        pip install -r requirements.txt
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10.6
 
-    - name: Run pytest
-      run: |
-        pytest
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install pylint
+          pip install poetry
+          poetry install --all-extras
+
+      - name: Run pylint
+        run: |
+          pylint $(find . -name "*.py")
+
+      - name: Run pytest with coverage
+        run: poetry run pytest --cov-config=.coveragerc --cov
+
+      - name: Check coverage percentage
+        run: |
+          COVERAGE_THRESHOLD=${{ inputs.COVERAGE_THRESHOLD }}
+
+          if [ -f ".coverage" ]; then
+            coverage=$(poetry run coverage report | awk '/TOTAL/ { print substr($NF, 1, length($NF)-1) }')
+          else
+            coverage=0
+          fi
+
+          if (( $(echo "$coverage >= $COVERAGE_THRESHOLD" | bc -l) )); then
+            echo "Code coverage is ${coverage}%."
+            exit 0
+          else
+            echo "Code coverage is ${coverage}%. Minimum required coverage is ${COVERAGE_THRESHOLD}%."
+            exit 1
+          fi
