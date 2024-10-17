@@ -153,7 +153,7 @@ jobs:
         docker rmi $DOCKER_METADATA_OUTPUT_TAGS --force
 
     - name: Slack Notification
-      uses: rtCamp/action-slack-notify
+      uses: rtCamp/action-slack-notify@v2
       if: failure()
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
