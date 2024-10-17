@@ -26,7 +26,7 @@ jobs:
           poetry install --all-extras
 
       - name: Run pytest with coverage
-        run: poetry run pytest --cov-config=.coveragerc --cov
+        run: poetry run pytest --cov-config=.coveragerc --cov -vv --color=yes
 
       - name: Check coverage percentage
         run: |
