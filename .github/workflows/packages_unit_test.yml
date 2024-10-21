@@ -43,7 +43,7 @@ jobs:
       # Run unit tests with coverage
       - name: Run unit tests with coverage
         run: |
-          poetry run pytest tests/unit --cov-config=.coveragerc --cov -vv --color=yes 
+          poetry run pytest tests/units --cov-config=.coveragerc --cov -vv --color=yes 
 
   # Second Job: Run Integration Tests
   integration-tests:
