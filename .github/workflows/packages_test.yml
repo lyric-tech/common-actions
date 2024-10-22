@@ -43,6 +43,8 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         run: |
+          git config --global credential.helper store && \
+          echo "https://${{ secrets.LYRIC_GITHUB_USERNAME }}:${{ secrets.LYRIC_GITHUB_TOKEN }}@github.com" >> $HOME/.git-credentials && \
           poetry install
 
       # Run unit tests with coverage
@@ -89,6 +91,8 @@ jobs:
       # Install dependencies
       - name: Install dependencies
         run: |
+          git config --global credential.helper store && \
+          echo "https://${{ secrets.LYRIC_GITHUB_USERNAME }}:${{ secrets.LYRIC_GITHUB_TOKEN }}@github.com" >> $HOME/.git-credentials && \
           poetry install
 
       # Run integration tests with coverage
