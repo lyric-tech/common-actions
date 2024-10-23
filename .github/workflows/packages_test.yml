@@ -3,6 +3,10 @@ name: Run Unit and Integration Tests
 on:
   workflow_call:
 
+env:
+    GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
+    GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
+
 jobs:
   # First Job: Run Unit Tests
   unit-tests:
@@ -12,6 +16,11 @@ jobs:
       # Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      # Set up Git credentials
+      - name: Set up Git credentials
+        run: |
+          git config --global url."https://${{ secrets.LYRIC_GITHUB_USERNAME }}:${{ secrets.LYRIC_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       # Set up Python
       - name: Set up Python 3.10
@@ -39,6 +48,11 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install
+          
+      # Install pytest and pytest-cov
+      - name: Install pytest and pytest-cov
+        run: |
+          poetry add --dev pytest pytest-cov
 
       # Run unit tests with coverage
       - name: Run unit tests with coverage
@@ -53,6 +67,11 @@ jobs:
       # Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
+        
+      # Set up Git credentials
+      - name: Set up Git credentials
+        run: |
+          git config --global url."https://${{ secrets.LYRIC_GITHUB_USERNAME }}:${{ secrets.LYRIC_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       # Set up Python
       - name: Set up Python 3.10
@@ -80,6 +99,11 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install
+          
+      # Install pytest and pytest-cov
+      - name: Install pytest and pytest-cov
+        run: |
+          poetry add --dev pytest pytest-cov
 
       # Run integration tests with coverage
       - name: Run integration tests with coverage
