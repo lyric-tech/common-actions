@@ -81,11 +81,6 @@ jobs:
           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-poetry-
-      
-      # Configure Git to use the Personal Access Token
-      - name: Configure Git authentication
-        run: |
-          git config --global url."https://${{ secrets.LYRIC_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       # Install dependencies
       - name: Install dependencies
