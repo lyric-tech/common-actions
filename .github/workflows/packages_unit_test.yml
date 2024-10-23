@@ -3,6 +3,9 @@ name: Run Unit test on PR
 on:
     workflow_call:
 
+env:
+    GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
+    GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
 jobs:
   test:
     name: Run pytest and check coverage
