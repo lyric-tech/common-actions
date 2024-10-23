@@ -2,11 +2,15 @@ name: Run Unit and Integration Tests
 
 on:
   workflow_call:
-
+  
+env:
+    GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
+    GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
+    
 jobs:
   # First Job: Run Unit Tests
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Run Unit Tests
     steps:
       # Checkout code
@@ -23,6 +27,7 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> $GITHUB_ENV
 
       # Cache pip dependencies
       - name: Cache Poetry cache
@@ -47,7 +52,7 @@ jobs:
 
   # Second Job: Run Integration Tests
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     name: Run Integration Tests
     steps:
       # Checkout code
@@ -64,6 +69,7 @@ jobs:
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> $GITHUB_ENV
 
       # Cache Poetry cache
       - name: Cache Poetry cache
@@ -84,4 +90,4 @@ jobs:
       # Run integration tests with coverage
       - name: Run integration tests with coverage
         run: |
-          poetry run pytest tests/integration --cov-config=.coveragerc --cov -vv --color=yes 
+          poetry run pytest tests/integration --cov-config=.coveragerc --cov -vv --color=yes
