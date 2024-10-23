@@ -52,7 +52,7 @@ jobs:
       # Install pytest and pytest-cov
       - name: Install pytest and pytest-cov
         run: |
-          pip install pytest pytest-cov
+          poetry add --dev pytest pytest-cov
 
       # Run unit tests with coverage
       - name: Run unit tests with coverage
@@ -103,7 +103,7 @@ jobs:
       # Install pytest and pytest-cov
       - name: Install pytest and pytest-cov
         run: |
-          pip install pytest pytest-cov
+          poetry add --dev pytest pytest-cov
 
       # Run integration tests with coverage
       - name: Run integration tests with coverage
