@@ -1,0 +1,64 @@
+name: Update Notes Chainbrain Package
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        required: true
+        type: string
+      package-version:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+      username:
+        required: true   
+      gitlab_username:
+        required: true     
+      gitlab_password:
+        required: true  
+
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+  
+jobs:
+  update_package:
+    runs-on: ubuntu-latest
+    name: Update Notes with Chainbrain Package version ${{ inputs.package-version }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.branch }}
+        token: ${{ secrets.token }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install poetry
+        
+    - name: Remove and Update Package
+      run: |
+        echo "https://${{ secrets.username }}:${{ secrets.token }}@github.com" >> $HOME/.git-credentials
+        echo "https://${{ secrets.gitlab_username }}:${{ secrets.gitlab_password }}@gitlab.com" >> $HOME/.git-credentials
+        git config --global credential.helper store
+        poetry remove chainbrain
+        poetry add git+https://gitlab.com/chainbrain/platform/chainbrain.git#${{ inputs.package-version }}
+      shell: bash
+
+    - uses: lyric-tech/common-ci/actions/git/commit-push@develop
+      with:
+        repository: ${{ inputs.repository }}
+        ref: ${{ inputs.branch }}
+        token: ${{ secrets.token }}
+        message: "Updated to Chainbrain Package Version ${{ inputs.package-version }}"
