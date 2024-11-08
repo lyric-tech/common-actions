@@ -1,0 +1,210 @@
+name: Run Package Tests on GCP Self-Hosted Runner
+
+on:
+  workflow_call:
+    inputs:
+      REPO_NAME:
+        required: true
+        type: string
+        description: 'Repository to test'
+      BRANCH_NAME:
+        required: true
+        type: string
+        description: 'Branch to test'
+      DATASET_PATH:
+        required: true
+        type: string
+        default: ''
+        description: 'Path to dataset file in S3'
+      MACHINE_TYPE:
+        description: 'Machine type on which to run the performance'
+        required: true
+        default: 'instance - 16Gb, 4vCPU'
+        type: string
+      PACKAGE_NAME:
+        description: 'Name of the package in the repository'
+        required: true
+        type: string
+      PYTHON_VERSION:
+        description: 'Python version of package for running the test'
+        required: false
+        type: string
+        default: '3.10'
+    secrets:
+      LYRIC_GITHUB_USERNAME:
+        required: false
+        description: 'Github username for private repo access'
+      LYRIC_GITHUB_TOKEN:
+        required: false
+        description: 'Github token for private repo access'
+      AWS_DEFAULT_REGION:
+        required: true
+        description: 'AWS region for ECR'
+      AWS_ECR_ROLE_ARN:
+        required: true
+        description: 'AWS role ARN for ECR'
+      GCP_WORKLOAD_IDENTITY:
+        required: true
+        description: 'GCP workload identity for GCR'
+      GCP_SERVICE_ACCOUNT:
+        required: true
+        description: 'GCP service account for GCR'
+      GCP_PROJECT_ID:
+        required: true
+        description: 'GCP project ID for GCR'
+      SLACK_WEBHOOK_URL:
+        required: true
+        description: 'Slack Webhook URL'
+
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+
+env:
+  INSTANCE_MAP: |
+    # Replace with actual IDs
+    instance - 16Gb, 4vCPU=package-test-runner-1
+    instance - 32Gb, 8vCPU=package-test-runner-2
+    instance - 64Gb, 16vCPU=package-test-runner-3
+    instance - 128Gb, 32vCPU=package-test-runner-4
+  PROJECT_ID: "development-367210"
+  DATASET_BUCKET: "lyric-package-test-datasets"
+  DATASET_BUCKET_REGION: "us-east-1"
+
+jobs:
+  manage-instance:
+    runs-on: ubuntu-latest
+    outputs:
+      instance_ip: ${{ steps.get-instance-ip.outputs.instance_ip }}
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}  # Your service account key
+          
+      - name: Set Project
+        run: |
+          gcloud config set project "$PROJECT_ID"  # Set your project ID
+          echo "GCP project set to $PROJECT_ID"
+
+      - name: Map Human-Readable Instance Type to Instance ID
+        id: map-instance
+        run: |
+          # Parse the INSTANCE_MAP to create a mapping
+          declare -A instance_map
+          while IFS='=' read -r key value; do
+            instance_map["$key"]="$value"
+          done <<< "$INSTANCE_MAP"
+
+          # Retrieve the instance ID based on the input
+          INSTANCE_ID=${instance_map["${{ github.event.inputs.instance_type }}"]}
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Instance type not found."
+            exit 1
+          fi
+          echo "::set-output name=instance_id::$INSTANCE_ID"
+
+      - name: Start GCP VM Instance
+        id: start-instance
+        run: |
+          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+          gcloud compute instances start "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
+          echo "Starting instance with ID: $INSTANCE_ID"
+
+      - name: Wait for Instance to be Running
+        run: |
+          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status RUNNING
+          echo "Instance $INSTANCE_ID is now running."
+
+      - name: Get Instance Public IP
+        id: get-instance-ip
+        run: |
+          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+          IP=$(gcloud compute instances describe "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
+          echo "::set-output name=instance_ip::$IP"
+
+  run-tests:
+    needs: manage-instance
+    runs-on: [self-hosted, your-runner-label]  # Replace with your self-hosted runner label
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '$PYTHON_VERSION' 
+
+      - name: Set up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # Your AWS access key
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # Your AWS secret key
+          aws-region: "$DATASET_BUCKET" # Your AWS region
+
+      - name: Pull Sample Data from S3
+        run: |
+          aws s3 cp "s3://$DATASET_PATH/$PACKAGE_NAME/${{ github.event.inputs.DATASET_PATH }}" ./data_file  --recursive # Pull the dataset files from S3
+
+      - name: Run Tests
+        run: |
+          python$PYTHON_VERSION -m venv .venv
+          source .venv/bin/activate
+          poetry install
+          cd $PACKAGE_NAME
+          python$PYTHON_VERSION -m pytest tests/units
+          deactivate
+
+  shutdown-instance:
+    needs: run-tests
+    runs-on: ubuntu-latest
+    if: always()  # This ensures the instance is shut down even if the tests fail.
+
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}  # Your service account key
+
+      - name: Set Project
+        run: |
+          gcloud config set project "$PROJECT_ID"  # Set your project ID
+          echo "GCP project set to $PROJECT_ID"
+
+      - name: Map Human-Readable Instance Type to Instance ID
+        id: map-instance
+        run: |
+          # Parse the INSTANCE_MAP to create a mapping
+          declare -A instance_map
+          while IFS='=' read -r key value; do
+            instance_map["$key"]="$value"
+          done <<< "$INSTANCE_MAP"
+
+          # Retrieve the instance ID based on the input
+          INSTANCE_ID=${instance_map["${{ github.event.inputs.instance_type }}"]}
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "Instance type not found."
+            exit 1
+          fi
+          echo "::set-output name=instance_id::$INSTANCE_ID"
+
+      - name: Shut Down GCP VM Instance
+        id: shut-down-instance
+        run: |
+          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+          gcloud compute instances stop "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
+          echo "Shut down instance with ID: $INSTANCE_ID"
+
+      - name: Wait for Instance to be TERMINATED
+        run: |
+          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status TERMINATED
+          echo "Instance $INSTANCE_ID is now terminated."
+
