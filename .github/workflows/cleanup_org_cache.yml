@@ -1,0 +1,25 @@
+name: Run Clean Cache Script
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 0 * * *'
+
+jobs:
+  clean-cache:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Run clean-cache.py
+        env:
+          CACHE_CLEANUP_TOKEN: ${{ secrets.CACHE_CLEANUP_TOKEN }}  # Get secret from GitHub Secrets
+        run: |
+          python github/clean-cache.py
