@@ -1,0 +1,119 @@
+name: Promote Notes from GCP to AWS Environment
+
+on:
+  workflow_call:
+    inputs:
+      NOTE_VERSION:
+        required: true
+        type: string
+      NOTE_REPOSITORY_NAME:
+        required: true
+        type: string
+      CUSTOMER_NAME:
+        required: true
+        type: string
+    secrets:
+      ARTIFACT_S3_PATH:
+        required: true
+      NOTES_S3_PATH:
+        required: true
+      AWS_ROLE_ARN:
+        required: true
+      AWS_DEFAULT_REGION:
+        required: true
+      GCP_PROJECT_ID:
+        required: true
+      GCP_WORKLOAD_IDENTITY:
+        required: true
+      GCP_SERVICE_ACCOUNT:
+        required: true
+
+permissions:
+  id-token: write
+  contents: write
+  repository-projects: write
+
+jobs:
+  get_artifact:
+    name: Get Artifact from GCS and promote to AWS
+    runs-on: self-hosted
+    steps:      
+      - name: Set note env variables
+        env:
+          NOTE_REPOSITORY_NAME: ${{ inputs.NOTE_REPOSITORY_NAME }}
+        run: |
+          echo "NOTE_NAME=$(echo $NOTE_REPOSITORY_NAME | sed 's/note-//')" >> $GITHUB_ENV
+      - uses: 'actions/checkout@v4'
+      
+      - name: Configure GCP Credentials
+        uses: 'google-github-actions/auth@v2'
+        id: 'auth'
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Login to GCR
+        uses: docker/login-action@v2
+        with:
+          registry: us-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+          
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          version: 'latest'
+      - name: 'Use gcloud CLI'
+        run: |
+          gcloud info
+          
+      - name: Download artifact and docker image
+        env:
+          NOTE_TAG: ${{ inputs.NOTE_VERSION }}
+          NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
+        run: |
+          gcloud storage cp gs://lyric-store-lyric/note_artifacts/private/${NOTE_NAME}/${NOTE_NAME}_${NOTE_VERSION}.zip artifact.zip
+          docker pull us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID}}/lyric/note/${NOTE_NAME}:${NOTE_VERSION}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          role-duration-seconds: 900
+            
+      - name: Upload note to ${{ inputs.CUSTOMER_NAME }} artifact
+        env:
+          ARTIFACT_S3_PATH: ${{ secrets.ARTIFACT_S3_PATH }}
+          NOTES_S3_PATH: ${{ secrets.NOTES_S3_PATH }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
+        run: |
+          aws s3 cp artifact.zip s3://lyric-store-lyric/note_artifacts/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}/${NOTE_NAME}_${NOTE_VERSION}.zip
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+          
+      - name: Create Repo in Amazon ECR
+        run: |
+          aws ecr describe-repositories --repository-names lyric/note/${NOTE_NAME} || aws ecr create-repository \
+            --repository-name lyric/note/${NOTE_NAME} --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration '{"encryptionType":"KMS"}' \
+            --tags Key=sprinto,Value=prod Key=env,Value=prod
+            
+      - name: Tag and push image to Amazon ECR
+        env:
+          ECR_REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
+          NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
+        run: |
+          docker tag us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
+          docker push ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
+      
+      - name: Clean up the images
+        env:
+          ECR_REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
+        run:
+          docker rmi gcr.io/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force
+          docker rmi ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force

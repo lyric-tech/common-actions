@@ -1,0 +1,56 @@
+name: Promote Notes to Customer Environment
+
+on:
+  workflow_call:
+    inputs:
+      NOTE_VERSION:
+        required: true
+        type: string
+      NOTE_REPOSITORY_NAME:
+        required: true
+        type: string
+      CUSTOMER_NAME:
+        required: true
+        type: string
+    secrets:
+      ARTIFACT_S3_PATH:
+        required: true
+      NOTES_S3_PATH:
+        required: true
+      AWS_ROLE_ARN:
+        required: true
+      AWS_DEFAULT_REGION:
+        required: true
+
+permissions:
+  id-token: write
+  contents: write 
+  repository-projects: write
+
+jobs:
+  note_promote:
+    name: Promote Note to ${{ inputs.CUSTOMER_NAME }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          role-duration-seconds: 900
+
+      - name: Set note env variables
+        env:
+          NOTE_REPOSITORY_NAME: ${{ inputs.NOTE_REPOSITORY_NAME }}
+        run: |
+          echo "NOTE_NAME=$(echo $NOTE_REPOSITORY_NAME | sed 's/note-//')" >> $GITHUB_ENV
+
+      - name: Upload note to ${{ inputs.CUSTOMER_NAME }} artifact
+        env:
+          ARTIFACT_S3_PATH: ${{ secrets.ARTIFACT_S3_PATH }}
+          NOTES_S3_PATH: ${{ secrets.NOTES_S3_PATH }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
+        run: |
+          aws configure set region $AWS_DEFAULT_REGION
+          aws s3 cp ${ARTIFACT_S3_PATH}/lyric/${NOTE_NAME}/${NOTE_NAME}_${NOTE_VERSION}.zip ${NOTES_S3_PATH}/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}/${NOTE_NAME}_${NOTE_VERSION}.zip
