@@ -3,14 +3,10 @@ name: Run Package Tests on GCP Self-Hosted Runner
 on:
   workflow_call:
     inputs:
-      REPO_NAME:
+      BRANCH_TAG_NAME:
         required: true
         type: string
-        description: 'Repository to test'
-      BRANCH_NAME:
-        required: true
-        type: string
-        description: 'Branch to test'
+        description: 'Branch/tag name to test'
       DATASET_PATH:
         required: true
         type: string
@@ -21,40 +17,11 @@ on:
         required: true
         default: 'instance - 16Gb, 4vCPU'
         type: string
-      PACKAGE_NAME:
-        description: 'Name of the package in the repository'
-        required: true
-        type: string
       PYTHON_VERSION:
         description: 'Python version of package for running the test'
         required: false
         type: string
         default: '3.10'
-    secrets:
-      LYRIC_GITHUB_USERNAME:
-        required: false
-        description: 'Github username for private repo access'
-      LYRIC_GITHUB_TOKEN:
-        required: false
-        description: 'Github token for private repo access'
-      AWS_DEFAULT_REGION:
-        required: true
-        description: 'AWS region for ECR'
-      AWS_ECR_ROLE_ARN:
-        required: true
-        description: 'AWS role ARN for ECR'
-      GCP_WORKLOAD_IDENTITY:
-        required: true
-        description: 'GCP workload identity for GCR'
-      GCP_SERVICE_ACCOUNT:
-        required: true
-        description: 'GCP service account for GCR'
-      GCP_PROJECT_ID:
-        required: true
-        description: 'GCP project ID for GCR'
-      SLACK_WEBHOOK_URL:
-        required: true
-        description: 'Slack Webhook URL'
 
 permissions:
   id-token: write
@@ -82,7 +49,9 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}  # Your service account key
+          token_format: 'access_token'
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           
       - name: Set Project
         run: |
@@ -99,7 +68,7 @@ jobs:
           done <<< "$INSTANCE_MAP"
 
           # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.instance_type }}"]}
+          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
           if [ -z "$INSTANCE_ID" ]; then
             echo "Instance type not found."
             exit 1
@@ -135,29 +104,31 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+        with:
+          ref: '$BRANCH_TAG_NAME'
       
       - uses: actions/setup-python@v5
         with:
           python-version: '$PYTHON_VERSION' 
 
-      - name: Set up AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # Your AWS access key
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # Your AWS secret key
-          aws-region: "$DATASET_BUCKET" # Your AWS region
+          role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
+          aws-region: "$DATASET_BUCKET_REGION" # Your AWS region
 
       - name: Pull Sample Data from S3
         run: |
-          aws s3 cp "s3://$DATASET_PATH/$PACKAGE_NAME/${{ github.event.inputs.DATASET_PATH }}" ./data_file  --recursive # Pull the dataset files from S3
+          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ github.event.inputs.DATASET_PATH }}" ./data_file/  --recursive # Pull the dataset files from S3
 
       - name: Run Tests
         run: |
           python$PYTHON_VERSION -m venv .venv
           source .venv/bin/activate
           poetry install
-          cd $PACKAGE_NAME
-          python$PYTHON_VERSION -m pytest tests/units
+          poetry add --dev pytest pytest-cov
+          poetry run pytest tests/units --cov-config=.coveragerc --cov -vv --color=yes
           deactivate
 
   shutdown-instance:
@@ -169,7 +140,9 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}  # Your service account key
+          token_format: 'access_token'
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set Project
         run: |
@@ -186,7 +159,7 @@ jobs:
           done <<< "$INSTANCE_MAP"
 
           # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.instance_type }}"]}
+          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
           if [ -z "$INSTANCE_ID" ]; then
             echo "Instance type not found."
             exit 1
