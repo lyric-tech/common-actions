@@ -74,7 +74,7 @@ jobs:
           NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
         run: |
           gcloud storage cp gs://lyric-store-lyric/note_artifacts/private/${NOTE_NAME}/${NOTE_NAME}_${NOTE_VERSION}.zip artifact.zip
-          docker pull us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID}}/lyric/note/${NOTE_NAME}:${NOTE_VERSION}
+          docker pull us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID}}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${NOTE_VERSION}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -98,8 +98,8 @@ jobs:
           
       - name: Create Repo in Amazon ECR
         run: |
-          aws ecr describe-repositories --repository-names lyric/note/${NOTE_NAME} || aws ecr create-repository \
-            --repository-name lyric/note/${NOTE_NAME} --image-scanning-configuration scanOnPush=true \
+          aws ecr describe-repositories --repository-names lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME} || aws ecr create-repository \
+            --repository-name lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME} --image-scanning-configuration scanOnPush=true \
             --encryption-configuration '{"encryptionType":"KMS"}' \
             --tags Key=sprinto,Value=prod Key=env,Value=prod
             
@@ -108,12 +108,12 @@ jobs:
           ECR_REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
           NOTE_VERSION: "${{ inputs.NOTE_VERSION == 'main' && 'latest' || inputs.NOTE_VERSION }}"
         run: |
-          docker tag us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
-          docker push ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
+          docker tag us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} ${ECR_REGISTRY}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
+          docker push ${ECR_REGISTRY}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${{ inputs.NOTE_VERSION }}
       
       - name: Clean up the images
         env:
           ECR_REGISTRY:  ${{ steps.login-ecr.outputs.registry }}
         run:
-          docker rmi gcr.io/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force
-          docker rmi ${ECR_REGISTRY}/lyric/note/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force
+          docker rmi gcr.io/${{ secrets.GCP_PROJECT_ID }}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force
+          docker rmi ${ECR_REGISTRY}/lyric/note/${{ inputs.CUSTOMER_NAME }}/${NOTE_NAME}:${{ inputs.NOTE_VERSION }} --force
