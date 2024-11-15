@@ -139,6 +139,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         target: ${{ inputs.APP_NAME }}
+        timeout-minutes: ${{ inputs.STEP_TIMEOUT }}
         build-args: |
           github_username=${{ secrets.LYRIC_GITHUB_USERNAME }}
           github_token=${{ secrets.LYRIC_GITHUB_TOKEN }}
