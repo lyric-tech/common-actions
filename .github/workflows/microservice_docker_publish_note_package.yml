@@ -21,6 +21,11 @@ on:
         required: false
         type: string
         description: 'Tag name for Docker build'
+      STEP_TIMEOUT:
+        required: false
+        type: number
+        default: 30
+        description: 'Timeout for the step in minutes. Defaults to 30 minutes.'
     secrets:
       LYRIC_GITHUB_USERNAME:
         required: false
@@ -138,6 +143,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         target: ${{ inputs.APP_NAME }}
+        timeout-minutes: ${{ inputs.STEP_TIMEOUT }}
         build-args: |
           github_username=${{ secrets.LYRIC_GITHUB_USERNAME }}
           github_token=${{ secrets.LYRIC_GITHUB_TOKEN }}
