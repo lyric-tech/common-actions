@@ -18,7 +18,7 @@ on:
         description: 'Application name for Docker build'
         default: ''
       TAG_NAME:
-        required: false
+        required: true
         type: string
         description: 'Tag name for Docker build'
       STEP_TIMEOUT:
