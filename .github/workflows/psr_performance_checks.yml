@@ -68,7 +68,7 @@ jobs:
           done <<< "$INSTANCE_MAP"
 
           # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
+          INSTANCE_ID=${instance_map["${{ inputs.MACHINE_TYPE }}"]}
           if [ -z "$INSTANCE_ID" ]; then
             echo "Instance type not found."
             exit 1
@@ -105,11 +105,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          ref: '$BRANCH_TAG_NAME'
+          ref: ${{ inputs.BRANCH_TAG_NAME }}
       
       - uses: actions/setup-python@v5
         with:
-          python-version: '$PYTHON_VERSION' 
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       # Configure AWS credentials
       - name: Configure AWS credentials
@@ -120,11 +120,12 @@ jobs:
 
       - name: Pull Sample Data from S3
         run: |
-          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ github.event.inputs.DATASET_PATH }}" ./data_file/  --recursive # Pull the dataset files from S3
+          mkdir -p ./dataset_files/
+          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./dataset_files/  --recursive # Pull the dataset files from S3
 
       - name: Run Tests
         run: |
-          python$PYTHON_VERSION -m venv .venv
+          python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
           poetry add --dev pytest pytest-cov
@@ -159,7 +160,7 @@ jobs:
           done <<< "$INSTANCE_MAP"
 
           # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
+          INSTANCE_ID=${instance_map["${{ inputs.MACHINE_TYPE }}"]}
           if [ -z "$INSTANCE_ID" ]; then
             echo "Instance type not found."
             exit 1
