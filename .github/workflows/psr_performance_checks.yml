@@ -103,7 +103,7 @@ jobs:
     runs-on: [self-hosted, your-runner-label]  # Replace with your self-hosted runner label
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: '$BRANCH_TAG_NAME'
       
