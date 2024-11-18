@@ -151,10 +151,10 @@ jobs:
       if: failure()
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_CHANNEL: development-deployment
+        SLACK_CHANNEL: docker-build-alerts
         SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
         SLACK_ICON: https://github.com/github.png?size=96
-        SLACK_MESSAGE: Docker build of ${{ inputs.APP_NAME }} failed for branch ${{ inputs.TAG_NAME }}
+        SLACK_MESSAGE: Docker build of ${{ inputs.APP_NAME || github.repository }} failed for branch ${{ inputs.TAG_NAME }}
         SLACK_TITLE: Docker Build
         SLACK_USERNAME: Lyric Bot
 
