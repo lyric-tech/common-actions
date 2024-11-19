@@ -18,9 +18,14 @@ on:
         description: 'Application name for Docker build'
         default: ''
       TAG_NAME:
-        required: false
+        required: true
         type: string
         description: 'Tag name for Docker build'
+      STEP_TIMEOUT:
+        required: false
+        type: number
+        default: 30
+        description: 'Timeout for the step in minutes. Defaults to 30 minutes.'
     secrets:
       LYRIC_GITHUB_USERNAME:
         required: false
@@ -133,12 +138,25 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         target: ${{ inputs.APP_NAME }}
+        timeout-minutes: ${{ inputs.STEP_TIMEOUT }}
         build-args: |
           github_username=${{ secrets.LYRIC_GITHUB_USERNAME }}
           github_token=${{ secrets.LYRIC_GITHUB_TOKEN }}
           docker_registry=${{ secrets.ECR_REGISTRY }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      if: failure()
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_CHANNEL: docker-build-alerts
+        SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+        SLACK_ICON: https://github.com/github.png?size=96
+        SLACK_MESSAGE: Docker build of ${{ inputs.APP_NAME || github.repository }} failed for branch ${{ inputs.TAG_NAME }}
+        SLACK_TITLE: Docker Build
+        SLACK_USERNAME: Lyric Bot
 
     - name: Remove Build Docker images
       env:
