@@ -100,7 +100,7 @@ jobs:
 
   run-tests:
     needs: manage-instance
-    runs-on: [self-hosted, your-runner-label]  # Replace with your self-hosted runner label
+    runs-on: [self-hosted, ${{ steps.get-instance-ip.outputs.instance_ip }}]  # Replace with your self-hosted runner label
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -120,16 +120,14 @@ jobs:
 
       - name: Pull Sample Data from S3
         run: |
-          mkdir -p ./dataset_files/
-          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./dataset_files/  --recursive # Pull the dataset files from S3
+          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./tests/data/psr_dataset/  --recursive # Pull the dataset files from S3
 
       - name: Run Tests
         run: |
           python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
-          poetry add --dev pytest pytest-cov
-          poetry run pytest tests/units --cov-config=.coveragerc --cov -vv --color=yes
+          poetry run pytest tests/psr 
           deactivate
 
   shutdown-instance:
