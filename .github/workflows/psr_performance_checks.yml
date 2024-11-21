@@ -61,7 +61,7 @@ jobs:
       - name: Map Human-Readable Instance Type to Instance ID
         id: map-instance
         run: |
-          case "${{ github.event.inputs.INSTANCE }}" in
+          case "${{ github.event.inputs.MACHINE_TYPE }}" in
             "instance - 16Gb, 4vCPU") INSTANCE_ID="package-test-runner-1" ;;
             "instance - 32Gb, 8vCPU") INSTANCE_ID="package-test-runner-2" ;;
             "instance - 64Gb, 16vCPU") INSTANCE_ID="package-test-runner-3" ;;
