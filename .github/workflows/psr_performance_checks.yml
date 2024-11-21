@@ -100,7 +100,7 @@ jobs:
 
   run-tests:
     needs: manage-instance
-    runs-on: [self-hosted, ${{ steps.get-instance-ip.outputs.instance_ip }}]  # Replace with your self-hosted runner label
+    runs-on: ${{ needs.manage-instance.outputs.instance_ip }}  # Replace with your self-hosted runner label
     steps:
       - name: Check out code
         uses: actions/checkout@v2
