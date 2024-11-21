@@ -49,6 +49,15 @@ on:
       GCP_PROJECT_ID:
         required: true
         description: 'GCP project ID for GCR'
+      AZURE_CREDENTIALS:
+        required: true
+        description: 'Azure credentials for ACR'
+      AZURE_CLIENT_ID:
+        required: true
+        description: 'Azure client ID for ACR'
+      AZUR_CLIENT_SECRET:
+        required: true
+        description: 'Azure client secret for ACR'
       SLACK_WEBHOOK_URL:
         required: true
         description: 'Slack Webhook URL'             
@@ -103,17 +112,18 @@ jobs:
         password: ${{ env.gcr_password }}
 
     - name: 'Login via Azure CLI'
-      uses: azure/login@v1
+      uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     # Login to Azure Container Registry
     - name: Docker Login
-      uses: azure/docker-login@v1
+      uses: azure/docker-login@v2
       with:
         login-server: lyricacr.azurecr.io
         username: ${{ secrets.AZURE_CLIENT_ID }}
-        password: ${{ secrets.AZUR_CLIENT_SECRET }}        
+        password: ${{ secrets.AZUR_CLIENT_SECRET }}   
+
     # Get Docker meta
     - name: Docker meta for ECR
       id: meta
