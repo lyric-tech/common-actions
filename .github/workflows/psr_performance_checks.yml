@@ -29,12 +29,12 @@ permissions:
   repository-projects: write
 
 env:
-  INSTANCE_MAP: |
-    # Replace with actual IDs
-    instance - 16Gb, 4vCPU=package-test-runner-1
-    instance - 32Gb, 8vCPU=package-test-runner-2
-    instance - 64Gb, 16vCPU=package-test-runner-3
-    instance - 128Gb, 32vCPU=package-test-runner-4
+  # INSTANCE_MAP: |
+  #   # Replace with actual IDs
+  #   instance - 16Gb, 4vCPU=package-test-runner-1
+  #   instance - 32Gb, 8vCPU=package-test-runner-2
+  #   instance - 64Gb, 16vCPU=package-test-runner-3
+  #   instance - 128Gb, 32vCPU=package-test-runner-4
   PROJECT_ID: "development-367210"
   DATASET_BUCKET: "lyric-package-test-datasets"
   DATASET_BUCKET_REGION: "us-east-1"
@@ -74,9 +74,10 @@ jobs:
         id: start-instance
         run: |
           INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          echo ${{ steps.map-instance.outputs.instance_id }}
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
           gcloud compute instances start "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
-          echo "Starting instance with ID: $INSTANCE_ID"
+          echo "Starting instance with ID: ${INSTANCE_ID}"
 
       - name: Wait for Instance to be Running
         run: |
