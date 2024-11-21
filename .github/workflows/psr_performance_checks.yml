@@ -61,19 +61,14 @@ jobs:
       - name: Map Human-Readable Instance Type to Instance ID
         id: map-instance
         run: |
-          # Parse the INSTANCE_MAP to create a mapping
-          declare -A instance_map
-          while IFS='=' read -r key value; do
-            instance_map["$key"]="$value"
-          done <<< "$INSTANCE_MAP"
-
-          # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ inputs.MACHINE_TYPE }}"]}
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Instance type not found."
-            exit 1
-          fi
-          echo "::set-output name=instance_id::$INSTANCE_ID"
+          case "${{ github.event.inputs.INSTANCE }}" in
+            "instance - 16Gb, 4vCPU") INSTANCE_ID="package-test-runner-1" ;;
+            "instance - 32Gb, 8vCPU") INSTANCE_ID="package-test-runner-2" ;;
+            "instance - 64Gb, 16vCPU") INSTANCE_ID="package-test-runner-3" ;;
+            "instance - 128Gb, 32vCPU") INSTANCE_ID="package-test-runner-4" ;;
+            *) echo "Invalid instance type"; exit 1 ;;
+          esac
+          echo "::set-output name=instance_id::${INSTANCE_ID}"
 
       - name: Start GCP VM Instance
         id: start-instance
