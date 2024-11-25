@@ -126,8 +126,8 @@ jobs:
           LYRIC_GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
           LYRIC_GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
         run: |
-          apt-get update && \
-          apt-get install -y --no-install-recommends git
+          sudo apt-get update && \
+          sudo apt-get install -y --no-install-recommends git
           echo "https://$LYRIC_GITHUB_USERNAME:$LYRIC_GITHUB_TOKEN@github.com" >> $HOME/.git-credentials
           git config --global credential.helper store
           python${{ inputs.PYTHON_VERSION }} -m venv .venv
