@@ -26,6 +26,11 @@ on:
         type: number
         default: 30
         description: 'Timeout for the step in minutes. Defaults to 30 minutes.'
+      RUNNER:
+        required: false
+        type: string
+        default: 'self-hosted'
+        description: 'Label of the runner on which to run the workflow'
     secrets:
       LYRIC_GITHUB_USERNAME:
         required: false
@@ -66,7 +71,7 @@ jobs:
   # Build and publish
   build_and_publish:
     name: Build and Publish
-    runs-on: self-hosted
+    runs-on: ${{ inputs.RUNNER }}
     steps:
     # Checkout the repository
     - name: Check out code
