@@ -44,6 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       instance_ip: ${{ steps.get-instance-ip.outputs.instance_ip }}
+      instance_id: ${{ steps.map-instance.outputs.instance_id }}
 
     steps:
       - name: Authenticate to GCP
@@ -55,8 +56,6 @@ jobs:
           
       - name: Set Project
         run: |
-          echo ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-          echo ${{ secrets.GCP_SERVICE_ACCOUNT }}
           gcloud config set project "$PROJECT_ID"  # Set your project ID
           echo "GCP project set to $PROJECT_ID"
 
@@ -95,10 +94,11 @@ jobs:
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
           IP=$(gcloud compute instances describe "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
           echo "::set-output name=instance_ip::$IP"
+          echo "::set-output name=instance_id::$INSTANCE_ID"
 
   run-tests:
     needs: manage-instance
-    runs-on: ${{ needs.manage-instance.outputs.instance_ip }}  # Replace with your self-hosted runner label
+    runs-on: ${{ needs.manage-instance.outputs.instance_id }}  # Replace with your self-hosted runner label
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -149,19 +149,14 @@ jobs:
       - name: Map Human-Readable Instance Type to Instance ID
         id: map-instance
         run: |
-          # Parse the INSTANCE_MAP to create a mapping
-          declare -A instance_map
-          while IFS='=' read -r key value; do
-            instance_map["$key"]="$value"
-          done <<< "$INSTANCE_MAP"
-
-          # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ inputs.MACHINE_TYPE }}"]}
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Instance type not found."
-            exit 1
-          fi
-          echo "::set-output name=instance_id::$INSTANCE_ID"
+          case "${{ github.event.inputs.MACHINE_TYPE }}" in
+            "instance - 16Gb, 4vCPU") INSTANCE_ID="package-test-runner-1" ;;
+            "instance - 32Gb, 8vCPU") INSTANCE_ID="package-test-runner-2" ;;
+            "instance - 64Gb, 16vCPU") INSTANCE_ID="package-test-runner-3" ;;
+            "instance - 128Gb, 32vCPU") INSTANCE_ID="package-test-runner-4" ;;
+            *) echo "Invalid instance type"; exit 1 ;;
+          esac
+          echo "::set-output name=instance_id::${INSTANCE_ID}"
 
       - name: Shut Down GCP VM Instance
         id: shut-down-instance
