@@ -81,12 +81,12 @@ jobs:
           gcloud compute instances start "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
           echo "Starting instance with ID: ${INSTANCE_ID}"
 
-      - name: Wait for Instance to be Running
-        run: |
-          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
-          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
-          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status RUNNING
-          echo "Instance $INSTANCE_ID is now running."
+      # - name: Wait for Instance to be Running
+      #   run: |
+      #     INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+      #     INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+      #     gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status RUNNING
+      #     echo "Instance $INSTANCE_ID is now running."
 
       - name: Get Instance Public IP
         id: get-instance-ip
@@ -171,10 +171,9 @@ jobs:
           gcloud compute instances stop "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
           echo "Shut down instance with ID: $INSTANCE_ID"
 
-      - name: Wait for Instance to be TERMINATED
-        run: |
-          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
-          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
-          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status TERMINATED
-          echo "Instance $INSTANCE_ID is now terminated."
-
+      # - name: Wait for Instance to be TERMINATED
+      #   run: |
+      #     INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+      #     INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+      #     gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status TERMINATED
+      #     echo "Instance $INSTANCE_ID is now terminated."
