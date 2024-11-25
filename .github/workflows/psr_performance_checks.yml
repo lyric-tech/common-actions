@@ -123,6 +123,10 @@ jobs:
 
       - name: Run Tests
         run: |
+          apt-get update && \
+          apt-get install -y --no-install-recommends git
+          echo "https://$LYRIC_GITHUB_USERNAME:$LYRIC_GITHUB_TOKEN@github.com" >> $HOME/.git-credentials
+          git config --global credential.helper store
           python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
