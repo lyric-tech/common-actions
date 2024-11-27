@@ -180,9 +180,10 @@ jobs:
           else
             echo "jq is already installed."
           fi
+          echo "RUNNER_NAME: $RUNNER_NAME"
           RUNNER_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/orgs/$ORG/actions/runners \
-            | jq -r '.runners[] | select(.name == env.RUNNER_NAME) | .id')
+            | jq -r '.runners[] | select(.name == $RUNNER_NAME) | .id')
 
           if [ -z "$RUNNER_ID" ]; then
             echo "Runner not found."
