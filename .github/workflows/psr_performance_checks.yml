@@ -133,7 +133,7 @@ jobs:
           python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
-          poetry run pytest tests/psr 
+          poetry run pytest -s tests/psr
           deactivate
 
   shutdown-instance:
@@ -165,9 +165,44 @@ jobs:
             *) echo "Invalid instance type"; exit 1 ;;
           esac
           echo "::set-output name=instance_id::${INSTANCE_ID}"
+      
+      - name: Check Runner Queue Status
+        id: check-runner
+        env:
+          GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
+          RUNNER_NAME: ${{ steps.map-instance.outputs.instance_id }}
+          ORG: lyric-tech
+        run: |
+          if ! command -v jq &> /dev/null; then
+            echo "jq could not be found, installing..."
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "jq is already installed."
+          fi
+          RUNNER_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/orgs/$ORG/actions/runners \
+            | jq -r '.runners[] | select(.name == env.RUNNER_NAME) | .id')
+
+          if [ -z "$RUNNER_ID" ]; then
+            echo "Runner not found."
+            exit 1
+          fi
+
+          QUEUED_JOBS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/orgs/$ORG/actions/runners/$RUNNER_ID/jobs \
+            | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
+
+          if [ "$QUEUED_JOBS" -gt 0 ]; then
+            echo "Runner is busy with $QUEUED_JOBS job(s). Skipping shutdown."
+            exit 78
+          else
+            echo "Runner is idle. Proceeding with shutdown."
+          fi
 
       - name: Shut Down GCP VM Instance
         id: shut-down-instance
+        if: steps.check-runner.outcome == 'success'
         run: |
           INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
