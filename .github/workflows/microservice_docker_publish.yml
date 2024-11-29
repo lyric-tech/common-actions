@@ -111,12 +111,6 @@ jobs:
         username: oauth2accesstoken
         password: ${{ env.gcr_password }}
 
-    - name: 'Login via Azure CLI'
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    # Login to Azure Container Registry
     # Login to Azure Container Registry
     - name: Log into ACR
       uses: docker/login-action@v3
