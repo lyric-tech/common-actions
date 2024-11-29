@@ -49,15 +49,15 @@ on:
       GCP_PROJECT_ID:
         required: true
         description: 'GCP project ID for GCR'
-      AZURE_CREDENTIALS:
+      ACR_ENDPOINT:
         required: true
-        description: 'Azure credentials for ACR'
-      AZURE_CLIENT_ID:
+        description: 'ACR endpoint for ACR'
+      ACR_USERNAME:
         required: true
-        description: 'Azure client ID for ACR'
-      AZUR_CLIENT_SECRET:
+        description: 'ACR username for ACR'
+      ACR_PASSWORD:
         required: true
-        description: 'Azure client secret for ACR'
+        description: 'ACR password for ACR'        
       SLACK_WEBHOOK_URL:
         required: true
         description: 'Slack Webhook URL'             
@@ -117,12 +117,13 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     # Login to Azure Container Registry
-    - name: Docker Login
-      uses: azure/docker-login@v2
+    # Login to Azure Container Registry
+    - name: Log into ACR
+      uses: docker/login-action@v3
       with:
-        login-server: lyricacr.azurecr.io
-        username: ${{ secrets.AZURE_CLIENT_ID }}
-        password: ${{ secrets.AZUR_CLIENT_SECRET }}   
+        registry: ${{ secrets.ACR_ENDPOINT }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
 
     # Get Docker meta
     - name: Docker meta for ECR
@@ -132,7 +133,7 @@ jobs:
         images: |
           ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
           ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
-          lyricacr.azurecr.io/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.ACR_ENDPOINT }}/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
