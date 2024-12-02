@@ -119,7 +119,7 @@ jobs:
       - name: Pull Sample Data from S3
         run: |
           echo "DATASET_BUCKET_REGION: $DATASET_BUCKET_REGION"
-          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./tests/data/psr_dataset/  --recursive # Pull the dataset files from S3
+          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./tests/data/psr_dataset/  --recursive --debug # Pull the dataset files from S3
 
       - name: Run Tests
         env:
@@ -139,6 +139,8 @@ jobs:
   shutdown-instance:
     needs: run-tests
     runs-on: ubuntu-latest
+    outputs:
+      instance_id: ${{ steps.map-instance.outputs.instance_id }}
     if: always()  # This ensures the instance is shut down even if the tests fail.
 
     steps:
@@ -180,22 +182,20 @@ jobs:
           else
             echo "jq is already installed."
           fi
-          echo "RUNNER_NAME: $RUNNER_NAME"
-          echo "TOKEN: $GITHUB_TOKEN"
-          RUNNER_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          QUEUED_JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/orgs/$ORG/actions/runners \
-            | jq -r '.runners[] | select(.name == $RUNNER_NAME) | .id')
+            | jq -r '.runners[] | select(.name == env.RUNNER_NAME) | .busy')
 
-          if [ -z "$RUNNER_ID" ]; then
-            echo "Runner not found."
-            exit 1
-          fi
+          # if [ -z "$RUNNER_ID" ]; then
+          #   echo "Runner not found."
+          #   exit 1
+          # fi
 
-          QUEUED_JOBS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/orgs/$ORG/actions/runners/$RUNNER_ID/jobs \
-            | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
+          # QUEUED_JOBS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          #   https://api.github.com/orgs/$ORG/actions/runners/$RUNNER_ID/jobs \
+          #   | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
 
-          if [ "$QUEUED_JOBS" -gt 0 ]; then
+          if [ "$QUEUED_JOBS" == "true" ]; then
             echo "Runner is busy with $QUEUED_JOBS job(s). Skipping shutdown."
             exit 78
           else
