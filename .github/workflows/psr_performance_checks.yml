@@ -182,6 +182,7 @@ jobs:
           else
             echo "jq is already installed."
           fi
+          echo "Checking status of $RUNNER_NAME"
           QUEUED_JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/orgs/$ORG/actions/runners \
             | jq -r '.runners[] | select(.name == env.RUNNER_NAME) | .busy')
@@ -196,10 +197,10 @@ jobs:
           #   | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
 
           if [ "$QUEUED_JOBS" == "true" ]; then
-            echo "Runner is busy with $QUEUED_JOBS job(s). Skipping shutdown."
+            echo "Runner $RUNNER_NAME is busy with job(s). Skipping shutdown."
             exit 78
           else
-            echo "Runner is idle. Proceeding with shutdown."
+            echo "Runner $RUNNER_NAME is idle. Proceeding with shutdown."
           fi
 
       - name: Shut Down GCP VM Instance
