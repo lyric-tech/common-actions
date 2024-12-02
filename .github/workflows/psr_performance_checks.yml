@@ -173,7 +173,7 @@ jobs:
         id: check-runner
         env:
           GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
-          RUNNER_NAME: ${{ steps.map-instance.outputs.instance_id }}
+          PSR_RUNNER_NAME: ${{ steps.map-instance.outputs.instance_id }}
           ORG: lyric-tech
         run: |
           if ! command -v jq &> /dev/null; then
@@ -183,10 +183,10 @@ jobs:
           else
             echo "jq is already installed."
           fi
-          echo "Checking status of $RUNNER_NAME"
+          echo "Checking status of $PSR_RUNNER_NAME"
           QUEUED_JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             https://api.github.com/orgs/$ORG/actions/runners \
-            | jq -r '.runners[] | select(.name == env.RUNNER_NAME) | .busy')
+            | jq -r '.runners[] | select(.name == env.PSR_RUNNER_NAME) | .busy')
 
           # if [ -z "$RUNNER_ID" ]; then
           #   echo "Runner not found."
@@ -198,10 +198,10 @@ jobs:
           #   | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
 
           if [ "$QUEUED_JOBS" == "true" ]; then
-            echo "Runner $RUNNER_NAME is busy with job(s). Skipping shutdown."
+            echo "Runner $PSR_RUNNER_NAME is busy with job(s). Skipping shutdown."
             exit 78
           else
-            echo "Runner $RUNNER_NAME is idle. Proceeding with shutdown."
+            echo "Runner $PSR_RUNNER_NAME is idle. Proceeding with shutdown."
           fi
 
       - name: Shut Down GCP VM Instance
