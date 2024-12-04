@@ -133,6 +133,7 @@ jobs:
           git config --global credential.helper store
 
           LOG_DIR="/var/log/psr/${{ github.event.repository.name }}/${{ inputs.BRANCH_TAG_NAME }}"
+          pwd
           if [ ! -d "$LOG_DIR" ]; then
             # Directory does not exist, so create it
             sudo mkdir -p "$LOG_DIR"
