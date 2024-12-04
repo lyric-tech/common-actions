@@ -135,7 +135,7 @@ jobs:
           LOG_DIR="/var/log/psr/${{ github.event.repository.name }}/${{ inputs.BRANCH_TAG_NAME }}"
           if [ ! -d "$LOG_DIR" ]; then
             # Directory does not exist, so create it
-            mkdir -p "$LOG_DIR"
+            sudo mkdir -p "$LOG_DIR"
             echo "Directory $LOG_DIR created."
           else
             echo "Directory $LOG_DIR already exists."
