@@ -134,7 +134,6 @@ jobs:
 
           CUR_DIR=$(pwd)
           LOG_DIR="$CUR_DIR/${{ github.event.repository.name }}/${{ inputs.BRANCH_TAG_NAME }}"
-          pwd
           if [ ! -d "$LOG_DIR" ]; then
             # Directory does not exist, so create it
             mkdir -p "$LOG_DIR"
@@ -143,10 +142,14 @@ jobs:
             echo "Directory $LOG_DIR already exists."
           fi
 
+          if [ ! -f $LOG_DIR/application.log ]; then
+            touch $LOG_DIR/application.log
+          fi
+
           python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
-          poetry run pytest -s tests/psr | tee -a $LOG_DIR/application.log
+          poetry run pytest -s tests/psr | tee $LOG_DIR/application.log
           deactivate
 
   shutdown-instance:
