@@ -35,7 +35,7 @@ jobs:
 
       # Cache pip dependencies
       - name: Cache Poetry cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pip
@@ -86,7 +86,7 @@ jobs:
 
       # Cache Poetry cache
       - name: Cache Poetry cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pip
