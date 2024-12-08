@@ -154,6 +154,16 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: '${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}'
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+    
     - name: Slack Notification
       uses: rtCamp/action-slack-notify@v2
       if: failure()
