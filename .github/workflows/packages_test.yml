@@ -20,7 +20,7 @@ jobs:
     steps:
       # Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # Set up Git credentials
       - name: Set up Git credentials
@@ -71,7 +71,7 @@ jobs:
     steps:
       # Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       # Set up Git credentials
       - name: Set up Git credentials
