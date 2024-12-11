@@ -66,6 +66,8 @@ permissions:
   id-token: write
   contents: write 
   repository-projects: write
+  actions: write
+  security-events: write
   
 jobs:
   # Build and publish
