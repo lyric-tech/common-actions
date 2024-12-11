@@ -172,7 +172,7 @@ jobs:
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH,MEDIUM'
-        skip-setup-trivy: true
+        # skip-setup-trivy: true
     
     - name: Slack Notification
       uses: rtCamp/action-slack-notify@v2
