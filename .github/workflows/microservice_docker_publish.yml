@@ -167,8 +167,8 @@ jobs:
       uses: aquasecurity/trivy-action@0.29.0
       with:
         image-ref: '${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }}'
-        format: 'template'
-        template: '@/contrib/sarif.tpl'
+        format: 'sarif'
+        # template: '@/contrib/sarif.tpl'
         exit-code: '0'
         ignore-unfixed: true
         vuln-type: 'os,library'
@@ -177,7 +177,7 @@ jobs:
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan report to Github code scan
-      uses: github/codeql-action/upload-sarif@v1
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'
     
