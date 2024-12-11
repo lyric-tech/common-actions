@@ -141,7 +141,7 @@ jobs:
       with:
         scan-type: "config"
         format: 'table'
-        scan-ref: .
+        scan-ref: ./Dockerfile
         exit-code: 0
         scanners: "vuln,secret,misconfig,license"
    
