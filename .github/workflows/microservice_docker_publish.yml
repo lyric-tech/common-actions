@@ -136,14 +136,14 @@ jobs:
         driver-opts: |
           image=moby/buildkit:v0.16.0
     
-    # - name: Run Trivy misconfiguration scan
-    #   uses: aquasecurity/trivy-action@0.29.0
-    #   with:
-    #     scan-type: "config"
-    #     format: 'table'
-    #     scan-ref: ./Dockerfile
-    #     exit-code: 0
-    #     scanners: "vuln,secret,misconfig,license"
+    - name: Run Trivy misconfiguration scan
+      uses: aquasecurity/trivy-action@0.29.0
+      with:
+        scan-type: "config"
+        format: 'table'
+        scan-ref: ./Dockerfile
+        exit-code: 0
+        scanners: "vuln,secret,misconfig,license"
    
     # Build and push
     - name: Build and push
@@ -172,7 +172,7 @@ jobs:
         ignore-unfixed: true
         vuln-type: 'os,library'
         severity: 'CRITICAL,HIGH,MEDIUM'
-        # skip-setup-trivy: true
+        skip-setup-trivy: true
     
     - name: Slack Notification
       uses: rtCamp/action-slack-notify@v2
