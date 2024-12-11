@@ -139,10 +139,11 @@ jobs:
     - name: Run Trivy misconfiguration scan
       uses: aquasecurity/trivy-action@0.29.0
       with:
-        scan-type: "fs"
+        scan-type: "config"
         format: 'table'
-        scan-ref: ./Dockerfile
+        scan-ref: .
         exit-code: 0
+        scanners: "vuln,secret,misconfig,license"
    
     # Build and push
     - name: Build and push
