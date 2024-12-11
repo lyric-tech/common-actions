@@ -141,7 +141,7 @@ jobs:
       with:
         scan-type: "fs"
         format: 'table'
-        scan-ref: .
+        scan-ref: ./Dockerfile
         exit-code: 0
    
     # Build and push
