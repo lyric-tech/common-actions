@@ -100,6 +100,9 @@ jobs:
     needs: manage-instance
     runs-on: ${{ needs.manage-instance.outputs.instance_id }}  # Replace with your self-hosted runner label
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        
       - name: Check out code
         uses: actions/checkout@v2
         with:
@@ -121,7 +124,7 @@ jobs:
           echo "Fetching below files from S3 bucket: $DATASET_BUCKET in region: $DATASET_BUCKET_REGION"
           aws s3 ls "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" --recursive --summarize
           aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./tests/data/psr_dataset/  --recursive # Pull the dataset files from S3
-
+      
       - name: Run Tests
         env:
           LYRIC_GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
