@@ -66,6 +66,8 @@ permissions:
   id-token: write
   contents: write 
   repository-projects: write
+  actions: write
+  security-events: write
   
 jobs:
   # Build and publish
@@ -135,6 +137,17 @@ jobs:
       with:
         driver-opts: |
           image=moby/buildkit:v0.16.0
+    
+    - name: Run Trivy misconfiguration scan
+      uses: aquasecurity/trivy-action@0.29.0
+      with:
+        scan-type: "config"
+        format: 'table'
+        scan-ref: ./Dockerfile
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        exit-code: 0
+        scanners: "vuln,secret,misconfig,license"
    
     # Build and push
     - name: Build and push
@@ -154,17 +167,35 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
-    - name: Slack Notification
-      uses: rtCamp/action-slack-notify@v2
-      if: failure()
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-        SLACK_CHANNEL: docker-build-alerts
-        SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
-        SLACK_ICON: https://github.com/github.png?size=96
-        SLACK_MESSAGE: Docker build of ${{ inputs.APP_NAME || github.repository }} failed for branch ${{ inputs.TAG_NAME }}
-        SLACK_TITLE: Docker Build
-        SLACK_USERNAME: Lyric Bot
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@0.29.0
+      with:
+        image-ref: '${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}:${{ inputs.TAG_NAME }}'
+        format: 'template'
+        template: '@/contrib/sarif.tpl'
+        exit-code: '0'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
+        skip-setup-trivy: true
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan report to Github code scan
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+    
+    # - name: Slack Notification
+    #   uses: rtCamp/action-slack-notify@v2
+    #   if: failure()
+    #   env:
+    #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+    #     SLACK_CHANNEL: docker-build-alerts
+    #     SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+    #     SLACK_ICON: https://github.com/github.png?size=96
+    #     SLACK_MESSAGE: Docker build of ${{ inputs.APP_NAME || github.repository }} failed for branch ${{ inputs.TAG_NAME }}
+    #     SLACK_TITLE: Docker Build
+    #     SLACK_USERNAME: Lyric Bot
 
     - name: Remove Build Docker images
       env:
