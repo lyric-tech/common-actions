@@ -111,6 +111,18 @@ jobs:
         registry: us-docker.pkg.dev
         username: oauth2accesstoken
         password: ${{ env.gcr_password }}
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_SP_CREDENTIALS }}
+
+    - name: 'Build and push image'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.AZURE_REGISTRY }}
+        username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+        password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
 
     # Get Docker meta
     - name: Docker meta for ECR
@@ -120,6 +132,7 @@ jobs:
         images: |
           ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
           ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.AZURE_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
