@@ -130,7 +130,6 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: |
-          ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
           ${{ secrets.AZURE_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
