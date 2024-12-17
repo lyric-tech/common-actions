@@ -132,6 +132,7 @@ jobs:
         images: |
           ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
           ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.AZURE_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
