@@ -73,6 +73,18 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.TAG_NAME }}
+    
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_SP_CREDENTIALS }}
+
+    - name: 'Login to ACR'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.AZURE_REGISTRY }}
+        username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+        password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
 
     # Configure AWS credentials
     - name: Configure AWS credentials
@@ -115,6 +127,7 @@ jobs:
         images: |
           ${{ secrets.ECR_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
           ${{ secrets.GCR_REGISTRY }}/lyric/${{ inputs.REPOSITORY_NAME }}
+          ${{ secrets.AZURE_REGISTRY }}/${{ inputs.REPOSITORY_NAME }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.TAG_NAME }}
