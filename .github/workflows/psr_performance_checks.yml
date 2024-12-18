@@ -22,19 +22,55 @@ on:
         required: false
         type: string
         default: '3.10'
+  workflow_dispatch:
+    inputs:
+      REPOSITORY_NAME:
+        required: true
+        type: string
+        default: ''
+        description: 'Package repo to be used for testing'
+      BRANCH_TAG_NAME:
+        required: true
+        type: string
+        description: 'Branch/tag name to test'
+      DATASET_PATH:
+        required: true
+        type: string
+        default: ''
+        description: 'Path to dataset file in S3. Eg. `small/1.0.0`'
+      MACHINE_TYPE:
+        description: 'Machine type on which to run the performance'
+        required: true
+        default: 'instance - 16Gb, 4vCPU'
+        type: choice
+        options: 
+        - instance - 16Gb, 4vCPU
+        - instance - 32Gb, 8vCPU
+        - instance - 64Gb, 16vCPU
+        - instance - 128Gb, 32vCPU
+      PYTHON_VERSION:
+        description: 'Python version of package for running the test'
+        required: false
+        type: string
+        default: '3.10'
+
+concurrency:
+  group: psr-performance-test
+  cancel-in-progress: false
 
 permissions:
   id-token: write
   contents: write 
   repository-projects: write
+  actions: read
 
 env:
-  INSTANCE_MAP: |
-    # Replace with actual IDs
-    instance - 16Gb, 4vCPU=package-test-runner-1
-    instance - 32Gb, 8vCPU=package-test-runner-2
-    instance - 64Gb, 16vCPU=package-test-runner-3
-    instance - 128Gb, 32vCPU=package-test-runner-4
+  # INSTANCE_MAP: |
+  #   # Replace with actual IDs
+  #   instance - 16Gb, 4vCPU=package-test-runner-1
+  #   instance - 32Gb, 8vCPU=package-test-runner-2
+  #   instance - 64Gb, 16vCPU=package-test-runner-3
+  #   instance - 128Gb, 32vCPU=package-test-runner-4
   PROJECT_ID: "development-367210"
   DATASET_BUCKET: "lyric-package-test-datasets"
   DATASET_BUCKET_REGION: "us-east-1"
@@ -44,6 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       instance_ip: ${{ steps.get-instance-ip.outputs.instance_ip }}
+      instance_id: ${{ steps.map-instance.outputs.instance_id }}
 
     steps:
       - name: Authenticate to GCP
@@ -61,34 +98,30 @@ jobs:
       - name: Map Human-Readable Instance Type to Instance ID
         id: map-instance
         run: |
-          # Parse the INSTANCE_MAP to create a mapping
-          declare -A instance_map
-          while IFS='=' read -r key value; do
-            instance_map["$key"]="$value"
-          done <<< "$INSTANCE_MAP"
-
-          # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Instance type not found."
-            exit 1
-          fi
-          echo "::set-output name=instance_id::$INSTANCE_ID"
+          case "${{ github.event.inputs.MACHINE_TYPE }}" in
+            "instance - 16Gb, 4vCPU") INSTANCE_ID="package-test-runner-1" ;;
+            "instance - 32Gb, 8vCPU") INSTANCE_ID="package-test-runner-2" ;;
+            "instance - 64Gb, 16vCPU") INSTANCE_ID="package-test-runner-3" ;;
+            "instance - 128Gb, 32vCPU") INSTANCE_ID="package-test-runner-4" ;;
+            *) echo "Invalid instance type"; exit 1 ;;
+          esac
+          echo "::set-output name=instance_id::${INSTANCE_ID}"
 
       - name: Start GCP VM Instance
         id: start-instance
         run: |
           INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+          echo ${{ steps.map-instance.outputs.instance_id }}
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
           gcloud compute instances start "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
-          echo "Starting instance with ID: $INSTANCE_ID"
+          echo "Starting instance with ID: ${INSTANCE_ID}"
 
-      - name: Wait for Instance to be Running
-        run: |
-          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
-          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
-          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status RUNNING
-          echo "Instance $INSTANCE_ID is now running."
+      # - name: Wait for Instance to be Running
+      #   run: |
+      #     INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+      #     INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+      #     gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status RUNNING
+      #     echo "Instance $INSTANCE_ID is now running."
 
       - name: Get Instance Public IP
         id: get-instance-ip
@@ -97,43 +130,86 @@ jobs:
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
           IP=$(gcloud compute instances describe "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
           echo "::set-output name=instance_ip::$IP"
+          echo "::set-output name=instance_id::$INSTANCE_ID"
 
   run-tests:
     needs: manage-instance
-    runs-on: [self-hosted, your-runner-label]  # Replace with your self-hosted runner label
+    runs-on: ${{ needs.manage-instance.outputs.instance_id }}  # Replace with your self-hosted runner label
     steps:
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
+        
       - name: Check out code
         uses: actions/checkout@v2
         with:
-          ref: '$BRANCH_TAG_NAME'
+          ref: ${{ inputs.BRANCH_TAG_NAME }}
+          repository: ${{ inputs.REPOSITORY_NAME || github.repository }}
       
       - uses: actions/setup-python@v5
         with:
-          python-version: '$PYTHON_VERSION' 
+          python-version: ${{ inputs.PYTHON_VERSION }}
 
       # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
-          aws-region: "$DATASET_BUCKET_REGION" # Your AWS region
+          role-to-assume: ${{ secrets.AWS_S3_ROLE_ARN }}
+          aws-region: "us-east-1" # Your AWS region
 
       - name: Pull Sample Data from S3
         run: |
-          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ github.event.inputs.DATASET_PATH }}" ./data_file/  --recursive # Pull the dataset files from S3
+          echo "Fetching below files from S3 bucket: $DATASET_BUCKET in region: $DATASET_BUCKET_REGION"
+          aws s3 ls "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" --recursive --summarize
+          aws s3 cp "s3://$DATASET_BUCKET/${{ github.event.repository.name }}/${{ inputs.DATASET_PATH }}" ./tests/data/psr_dataset/  --recursive # Pull the dataset files from S3
 
+      - name: Collect Workflow Telemetry
+        uses: catchpoint/workflow-telemetry-action@v2
       - name: Run Tests
+        env:
+          LYRIC_GITHUB_USERNAME: ${{ secrets.LYRIC_GITHUB_USERNAME }}
+          LYRIC_GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
         run: |
-          python$PYTHON_VERSION -m venv .venv
+          # sudo apt-get update && \
+          # sudo apt-get install -y --no-install-recommends git
+          echo "https://$LYRIC_GITHUB_USERNAME:$LYRIC_GITHUB_TOKEN@github.com" >> $HOME/.git-credentials
+          git config --global credential.helper store
+
+          CUR_DIR=$(pwd)
+          LOG_DIR="$CUR_DIR/${{ github.event.repository.name }}/logs/${{ inputs.BRANCH_TAG_NAME }}"
+          if [ ! -d "$LOG_DIR" ]; then
+            # Directory does not exist, so create it
+            mkdir -p "$LOG_DIR"
+            echo "Directory $LOG_DIR created."
+          else
+            echo "Directory $LOG_DIR already exists."
+          fi
+
+          if [ ! -f "$LOG_DIR/application.log" ]; then
+            echo "Creating log file $LOG_DIR/application.log"
+            touch "$LOG_DIR/application.log"
+          fi
+
+          CPU_CORES=$(grep --count ^processor /proc/cpuinfo)
+          CPU_ARCHITECTURE=$(lscpu | grep -oP 'Architecture:\s*\K.+')
+          CPU_MODEL=$(lscpu | grep -oP '\s*Model\sname:\s*\K.+')
+          MEM_TOTAL=$(cat /proc/meminfo | grep -oP 'MemTotal:\s*\K.+')
+          LINUX_KERNAL_INFO=$(cat /proc/version)
+
+          echo "Hardware spec of machine on which performance test is executed are as below:-"
+          echo "CPU Cores: $CPU_CORES with Architecture: $CPU_ARCHITECTURE and model: ($CPU_MODEL)"
+          echo "Memory (RAM, in KB): $MEM_TOTAL"
+          echo "Linux Kernal Info: $LINUX_KERNAL_INFO"
+          python${{ inputs.PYTHON_VERSION }} -m venv .venv
           source .venv/bin/activate
           poetry install
-          poetry add --dev pytest pytest-cov
-          poetry run pytest tests/units --cov-config=.coveragerc --cov -vv --color=yes
+          poetry run pytest -s tests/psr | tee "$LOG_DIR/application.log"
           deactivate
 
   shutdown-instance:
     needs: run-tests
     runs-on: ubuntu-latest
+    outputs:
+      instance_id: ${{ steps.map-instance.outputs.instance_id }}
     if: always()  # This ensures the instance is shut down even if the tests fail.
 
     steps:
@@ -152,32 +228,62 @@ jobs:
       - name: Map Human-Readable Instance Type to Instance ID
         id: map-instance
         run: |
-          # Parse the INSTANCE_MAP to create a mapping
-          declare -A instance_map
-          while IFS='=' read -r key value; do
-            instance_map["$key"]="$value"
-          done <<< "$INSTANCE_MAP"
-
-          # Retrieve the instance ID based on the input
-          INSTANCE_ID=${instance_map["${{ github.event.inputs.MACHINE_TYPE }}"]}
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Instance type not found."
-            exit 1
+          case "${{ github.event.inputs.MACHINE_TYPE }}" in
+            "instance - 16Gb, 4vCPU") INSTANCE_ID="package-test-runner-1" ;;
+            "instance - 32Gb, 8vCPU") INSTANCE_ID="package-test-runner-2" ;;
+            "instance - 64Gb, 16vCPU") INSTANCE_ID="package-test-runner-3" ;;
+            "instance - 128Gb, 32vCPU") INSTANCE_ID="package-test-runner-4" ;;
+            *) echo "Invalid instance type"; exit 1 ;;
+          esac
+          echo "::set-output name=instance_id::${INSTANCE_ID}"
+      
+      - name: Check Runner Queue Status
+        id: check-runner
+        env:
+          GITHUB_TOKEN: ${{ secrets.LYRIC_GITHUB_TOKEN }}
+          PSR_RUNNER_NAME: ${{ steps.map-instance.outputs.instance_id }}
+          ORG: lyric-tech
+        run: |
+          if ! command -v jq &> /dev/null; then
+            echo "jq could not be found, installing..."
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "jq is already installed."
           fi
-          echo "::set-output name=instance_id::$INSTANCE_ID"
+          echo "Checking status of $PSR_RUNNER_NAME"
+          QUEUED_JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            https://api.github.com/orgs/$ORG/actions/runners \
+            | jq -r '.runners[] | select(.name == env.PSR_RUNNER_NAME) | .busy')
+
+          # if [ -z "$RUNNER_ID" ]; then
+          #   echo "Runner not found."
+          #   exit 1
+          # fi
+
+          # QUEUED_JOBS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          #   https://api.github.com/orgs/$ORG/actions/runners/$RUNNER_ID/jobs \
+          #   | jq '[.jobs[] | select(.status == "queued" or .status == "in_progress")] | length')
+
+          if [ "$QUEUED_JOBS" == "true" ]; then
+            echo "Runner $PSR_RUNNER_NAME is busy with job(s). Skipping shutdown."
+            exit 78
+          else
+            echo "Runner $PSR_RUNNER_NAME is idle. Proceeding with shutdown."
+          fi
 
       - name: Shut Down GCP VM Instance
         id: shut-down-instance
+        if: steps.check-runner.outcome == 'success'
         run: |
           INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
           INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
           gcloud compute instances stop "$INSTANCE_ID" --zone "$INSTANCE_ZONE"
           echo "Shut down instance with ID: $INSTANCE_ID"
 
-      - name: Wait for Instance to be TERMINATED
-        run: |
-          INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
-          INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
-          gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status TERMINATED
-          echo "Instance $INSTANCE_ID is now terminated."
-
+      # - name: Wait for Instance to be TERMINATED
+      #   run: |
+      #     INSTANCE_ID=${{ steps.map-instance.outputs.instance_id }}
+      #     INSTANCE_ZONE=$(gcloud compute instances list "$INSTANCE_ID" --format 'csv[no-heading](zone)')
+      #     gcloud compute instances wait-for-status "$INSTANCE_ID" --zone "$INSTANCE_ZONE" --status TERMINATED
+      #     echo "Instance $INSTANCE_ID is now terminated."
