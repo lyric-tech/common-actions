@@ -22,6 +22,37 @@ on:
         required: false
         type: string
         default: '3.10'
+    secrets:
+      LYRIC_GITHUB_USERNAME:
+        required: false
+        description: 'Github username for private repo access'
+      LYRIC_GITHUB_TOKEN:
+        required: false
+        description: 'Github token for private repo access'
+      AWS_DEFAULT_REGION:
+        required: true
+        description: 'AWS region for ECR'
+      AWS_ECR_ROLE_ARN:
+        required: true
+        description: 'AWS role ARN for ECR'
+      ECR_REGISTRY:
+        required: true
+        description: 'ECR registry for ECR'
+      GCR_REGISTRY:
+        required: true
+        description: 'GCR registry for GCR'
+      GCP_WORKLOAD_IDENTITY:
+        required: true
+        description: 'GCP workload identity for GCR'
+      GCP_SERVICE_ACCOUNT:
+        required: true
+        description: 'GCP service account for GCR'
+      GCP_PROJECT_ID:
+        required: true
+        description: 'GCP project ID for GCR'
+      SLACK_WEBHOOK_URL:
+        required: true
+        description: 'Slack Webhook URL'  
   workflow_dispatch:
     inputs:
       REPOSITORY_NAME:
