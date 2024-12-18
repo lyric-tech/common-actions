@@ -116,12 +116,18 @@ jobs:
     steps:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
+        env:
+          GCP_WORKLOAD_IDENTITY: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
         with:
           token_format: 'access_token'
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: $GCP_WORKLOAD_IDENTITY
+          service_account: $GCP_SERVICE_ACCOUNT
           
       - name: Set Project
+        env:
+          PROJECT_ID: ${{ env.PROJECT_ID }}
         run: |
           gcloud config set project "$PROJECT_ID"  # Set your project ID
           echo "GCP project set to $PROJECT_ID"
