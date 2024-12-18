@@ -22,6 +22,41 @@ on:
         required: false
         type: string
         default: '3.10'
+  workflow_dispatch:
+    inputs:
+      REPOSITORY_NAME:
+        required: true
+        type: string
+        default: ''
+        description: 'Package repo to be used for testing'
+      BRANCH_TAG_NAME:
+        required: true
+        type: string
+        description: 'Branch/tag name to test'
+      DATASET_PATH:
+        required: true
+        type: string
+        default: ''
+        description: 'Path to dataset file in S3. Eg. `small/1.0.0`'
+      MACHINE_TYPE:
+        description: 'Machine type on which to run the performance'
+        required: true
+        default: 'instance - 16Gb, 4vCPU'
+        type: choice
+        options: 
+        - instance - 16Gb, 4vCPU
+        - instance - 32Gb, 8vCPU
+        - instance - 64Gb, 16vCPU
+        - instance - 128Gb, 32vCPU
+      PYTHON_VERSION:
+        description: 'Python version of package for running the test'
+        required: false
+        type: string
+        default: '3.10'
+
+concurrency:
+  group: psr-performance-test
+  cancel-in-progress: false
 
 permissions:
   id-token: write
