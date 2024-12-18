@@ -122,8 +122,8 @@ jobs:
         with:
           token_format: 'access_token'
           project_id: ${{ env.PROJECT_ID }}
-          workload_identity_provider: $GCP_WORKLOAD_IDENTITY
-          service_account: $GCP_SERVICE_ACCOUNT
+          workload_identity_provider: ${{ env.GCP_WORKLOAD_IDENTITY }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
           
       - name: Set Project
         env:
