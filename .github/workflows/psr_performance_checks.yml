@@ -91,7 +91,7 @@ concurrency:
 
 permissions:
   id-token: write
-  contents: write 
+  contents: read 
   repository-projects: write
   actions: read
 
