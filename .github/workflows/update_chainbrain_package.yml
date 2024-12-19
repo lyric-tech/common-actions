@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Update Notes with Chainbrain Package version ${{ inputs.package-version }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.branch }}

@@ -147,7 +147,7 @@ jobs:
         uses: catchpoint/workflow-telemetry-action@v2
         
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.BRANCH_TAG_NAME }}
           repository: ${{ inputs.REPOSITORY_NAME || github.repository }}
