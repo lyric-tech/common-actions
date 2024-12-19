@@ -74,6 +74,10 @@ env:
   PROJECT_ID: "development-367210"
   DATASET_BUCKET: "lyric-package-test-datasets"
   DATASET_BUCKET_REGION: "us-east-1"
+  GUROBI_LICENSE: ${{ secrets.GUROBI_LICENSE }}
+  WLSACCESSID: ${{ secrets.WLS_ACCESS_ID }}
+  WLSSECRET: ${{ secrets.WLS_SECRET }}
+  LICENSEID: ${{ secrets.WLS_LICENSEID }}
 
 jobs:
   manage-instance:
@@ -87,10 +91,13 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           token_format: 'access_token'
+          project_id: ${{ env.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           
       - name: Set Project
+        env:
+          PROJECT_ID: ${{ env.PROJECT_ID }}
         run: |
           gcloud config set project "$PROJECT_ID"  # Set your project ID
           echo "GCP project set to $PROJECT_ID"
