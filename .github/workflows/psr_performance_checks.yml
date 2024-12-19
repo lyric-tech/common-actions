@@ -74,6 +74,10 @@ env:
   PROJECT_ID: "development-367210"
   DATASET_BUCKET: "lyric-package-test-datasets"
   DATASET_BUCKET_REGION: "us-east-1"
+  GUROBI_LICENSE: ${{ secrets.GUROBI_LICENSE }}
+  WLSACCESSID: ${{ secrets.WLS_ACCESS_ID }}
+  WLSSECRET: ${{ secrets.WLS_SECRET }}
+  LICENSEID: ${{ secrets.WLS_LICENSEID }}
 
 jobs:
   manage-instance:
