@@ -21,7 +21,7 @@ on:
         description: 'Python version of package for running the test'
         required: false
         type: string
-        default: '3.10'  
+        default: '3.10'
   workflow_dispatch:
     inputs:
       REPOSITORY_NAME:
